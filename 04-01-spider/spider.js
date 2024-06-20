@@ -28,6 +28,8 @@ export function sipider(url, cb){
           })
         }
       })
+    } else{
+      cb(null, filename, false)
     }
   })
 }
