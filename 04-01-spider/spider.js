@@ -30,35 +30,32 @@ function saveFile(filename, contents, cb){
   })
 }
 
-function spiderLinks(currentUrl, body, nesting, cb){
+function spiderLinks(currentUrl, body, nesting, queue){
   if(nesting === 0){
-    return process.nextTick(cb)
+    return
   }
 
   const links = getPageLinks(currentUrl, body)
-  if(links.length){
-    return process.nextTick(cb)
+  if(links.length === 0){
+    return
   }
-
-  let completed = 0
-  let hasErrors = false
-
-  function done(err){
-    if(err){
-      hasErrors = true
-      return cb(err)
-    }
-    if(++completed === links.length && !hasErrors){
-      return cb()
-    }
-  }
-  links.forEach(link => spider(link, nesting-1, done))
+  links.forEach(link => spider(link, nesting-1, queue))
 }
 
+const spidering = new Set()
+export function spider(url, nesting, queue){
+  if(spidering.has(url)){
+    return
+  }
+  spidering.add(url)
+  queue.pushTask((done) => {
+    spiderTask(url, nesting, queue, done)
+  })
+}
 
-export function spider(url, nesting, cb){
+export function spiderTask(url, nesting, queue, cb){
   const filename = urlToFilename(url);
-  fs.access(filename, (err, fileContent) => {
+  fs.readFile(filename, (err, fileContent) => {
 
     if(err){
       if(err.code !== "ENOENT"){
@@ -70,11 +67,13 @@ export function spider(url, nesting, cb){
         if(err){
           return cb(err)
         }
-        spiderLinks(url, requestContent, nesting, cb)
+        spiderLinks(url, requestContent, nesting, queue)
+       return cb()
       })
     }
 
     // the file already exist, let's process the links
-    spiderLinks(url, fileContent, nesting, cb)
+    spiderLinks(url, fileContent, nesting, queue)
+    return cb()
   })
 }

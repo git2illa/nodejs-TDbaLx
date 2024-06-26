@@ -1,29 +1,28 @@
-import { EventEmitter } from "events";
-import { argv0 } from "process";
+import { EventEmitter } from 'events'
 
-export class TaskQueue extends EventEmitter{
-  constructor(concurrency){
+export class TaskQueue extends EventEmitter {
+  constructor (concurrency) {
     super()
-    this.oncurrency = concurrency
+    this.concurrency = concurrency
     this.running = 0
     this.queue = []
   }
 
-  pushTask(task){
+  pushTask (task) {
     this.queue.push(task)
     process.nextTick(this.next.bind(this))
     return this
   }
 
-  next(){
-    if(this.running === 0 && this.queue.length === 0){
+  next () {
+    if (this.running === 0 && this.queue.length === 0) {
       return this.emit('empty')
     }
 
-    while(this.running < this.concurrency && this.queue.length){
+    while (this.running < this.concurrency && this.queue.length) {
       const task = this.queue.shift()
       task((err) => {
-        if(err){
+        if (err) {
           this.emit('error', err)
         }
         this.running--
